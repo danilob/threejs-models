@@ -2,6 +2,10 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {Pane} from 'tweakpane';
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
+
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
+
 const PARAMS = {
     visible: false,
     checkVisible: () => {
@@ -50,6 +54,52 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
+ * Models
+ */
+const gltfLoader = new GLTFLoader()
+let mixer = null
+let mixerAction = null
+gltfLoader.load(
+    'models/Fox/glTF/Fox.gltf',
+    (gltf) => {
+        console.log(gltf)
+        gltf.scene.traverse( function( node ) {
+
+            if ( node.isMesh ) { node.castShadow = true; }
+        
+        } );
+        mixer = new THREE.AnimationMixer(gltf.scene)
+
+        let options = {none: ''}
+        gltf.animations.forEach((item)=>{
+            options[item.name] = item
+        })
+
+        const ANIMATION = {
+            'animation': '',
+        }
+        pane.addInput(ANIMATION,'animation',{options: options}).on('change',(ev)=>{
+            if (ANIMATION['animation']){
+                if (mixerAction !== null)
+                    mixer.stopAllAction()
+                mixerAction = mixer.clipAction(ANIMATION['animation'])
+                mixerAction.play()
+            }else{
+                mixer.stopAllAction()
+            }
+        })
+        
+
+        gltf.scene.scale.set(0.015,0.015,0.015)
+        gltf.scene.position.set(0,-0.65,0)
+        scene.add(gltf.scene)
+        
+    }
+)
+
+
+
+/**
  * Lights
  */
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
@@ -67,8 +117,8 @@ pane.addInput(PARAMS, "visible",{
     PARAMS.visibleLightHelper()
 })
 
-const directionalLight = new THREE.DirectionalLight(0x00fffc, 0.3)
-directionalLight.position.set(5, 2.5, 0.5)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
+directionalLight.position.set(5, 5, 5)
 scene.add(directionalLight)
 directionalLight.visible = true
 directionalLight.castShadow = true
@@ -263,6 +313,10 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime()
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
+
+    //Updade Mixer
+    if(mixer !== null)
+        mixer.update(deltaTime)
 
     // Update controls
     controls.update()
