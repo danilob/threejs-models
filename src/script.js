@@ -2,6 +2,9 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {Pane} from 'tweakpane';
 import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
+
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
 const PARAMS = {
     visible: false,
     checkVisible: () => {
@@ -50,9 +53,32 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
+ * Models
+ */
+let mixer = null
+const gltfLoader = new GLTFLoader()
+gltfLoader.load(
+    '/models/Fox/glTF/Fox.gltf',
+    (gltf) =>
+    {
+        gltf.scene.scale.set(0.015,0.015,0.015)
+        gltf.scene.position.set(0,-0.65,0)
+        scene.add(gltf.scene)
+        mixer = new THREE.AnimationMixer(gltf.scene)
+        const action = mixer.clipAction(gltf.animations[2])
+        action.play()
+        console.log(gltf)
+        gltf.scene.traverse( function( node ) {
+
+            if ( node.isMesh ) { node.castShadow = true; }
+        
+        } );
+    }
+)
+/**
  * Lights
  */
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
 scene.add(ambientLight)
 pane.addInput(ambientLight, "intensity", {
     label: "amb. level",
@@ -67,8 +93,8 @@ pane.addInput(PARAMS, "visible",{
     PARAMS.visibleLightHelper()
 })
 
-const directionalLight = new THREE.DirectionalLight(0x00fffc, 0.3)
-directionalLight.position.set(5, 2.5, 0.5)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+directionalLight.position.set(5, 5, 5)
 scene.add(directionalLight)
 directionalLight.visible = true
 directionalLight.castShadow = true
@@ -264,6 +290,10 @@ const tick = () =>
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
 
+    if(mixer!==null)
+    {
+        mixer.update(deltaTime)
+    }
     // Update controls
     controls.update()
 
